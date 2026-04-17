@@ -239,6 +239,98 @@ function renderMonth(){
   wrap.appendChild(grid);
   app.appendChild(wrap);
 
+  // ── HABIT LINE GRAPH ──
+  const graphData = [];
+  for(let gd=1; gd<=dim; gd++){
+    const gkey = dk(state.year, state.month, gd);
+    const habits = (state.data[gkey]||{}).habits||[];
+    graphData.push({ day: gd, count: habits.filter(h=>h.done).length });
+  }
+  const maxCount = Math.max(...graphData.map(g=>g.count), 1);
+
+  const graphWrap = el('div','');
+  graphWrap.style.cssText='padding: 0 5vw 28px;';
+
+  const graphTitle = el('div','');
+  graphTitle.style.cssText='font-size:clamp(9px,1.1vw,12px);font-weight:500;letter-spacing:.12em;color:#b5a99a;text-transform:uppercase;margin-bottom:12px;';
+  graphTitle.textContent='Little Habits · This Month';
+  graphWrap.appendChild(graphTitle);
+
+  const svgW = 600, svgH = 120, padL = 28, padR = 10, padT = 10, padB = 24;
+  const chartW = svgW - padL - padR;
+  const chartH = svgH - padT - padB;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`0 0 ${svgW} ${svgH}`);
+  svg.setAttribute('width','100%');
+  svg.style.display='block';
+
+  // Y grid lines & labels
+  const ySteps = maxCount <= 3 ? maxCount : 4;
+  for(let i=0; i<=ySteps; i++){
+    const val = Math.round((maxCount/ySteps)*i);
+    const gy = padT + chartH - (i/ySteps)*chartH;
+    const gridLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+    gridLine.setAttribute('x1',padL); gridLine.setAttribute('x2',svgW-padR);
+    gridLine.setAttribute('y1',gy); gridLine.setAttribute('y2',gy);
+    gridLine.setAttribute('stroke','#ebe6de'); gridLine.setAttribute('stroke-width','1');
+    svg.appendChild(gridLine);
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x',padL-4); label.setAttribute('y',gy+4);
+    label.setAttribute('text-anchor','end'); label.setAttribute('font-size','9');
+    label.setAttribute('fill','#b5a99a'); label.setAttribute('font-family','DM Sans,sans-serif');
+    label.textContent = val;
+    svg.appendChild(label);
+  }
+
+  // Build points
+  const pts = graphData.map((g,i)=>{
+    const px = padL + (i/(dim-1||1))*chartW;
+    const py = padT + chartH - (g.count/maxCount)*chartH;
+    return {x:px, y:py, day:g.day, count:g.count};
+  });
+
+  // Area fill
+  if(pts.length > 1){
+    let areaD = `M${pts[0].x},${padT+chartH}`;
+    pts.forEach(p=>{ areaD+=` L${p.x},${p.y}`; });
+    areaD+=` L${pts[pts.length-1].x},${padT+chartH} Z`;
+    const area = document.createElementNS('http://www.w3.org/2000/svg','path');
+    area.setAttribute('d',areaD);
+    area.setAttribute('fill','#c17f5a'); area.setAttribute('opacity','0.08');
+    svg.appendChild(area);
+
+    let lineD = `M${pts[0].x},${pts[0].y}`;
+    pts.slice(1).forEach(p=>{ lineD+=` L${p.x},${p.y}`; });
+    const line = document.createElementNS('http://www.w3.org/2000/svg','path');
+    line.setAttribute('d',lineD);
+    line.setAttribute('fill','none'); line.setAttribute('stroke','#c17f5a');
+    line.setAttribute('stroke-width','2'); line.setAttribute('stroke-linejoin','round');
+    line.setAttribute('stroke-linecap','round');
+    svg.appendChild(line);
+  }
+
+  // Dots + x labels
+  pts.forEach(p=>{
+    if(p.count > 0){
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('cx',p.x); dot.setAttribute('cy',p.y);
+      dot.setAttribute('r','3'); dot.setAttribute('fill','#c17f5a');
+      svg.appendChild(dot);
+    }
+    if(p.day===1 || p.day%5===0 || p.day===dim){
+      const xl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      xl.setAttribute('x',p.x); xl.setAttribute('y',svgH-4);
+      xl.setAttribute('text-anchor','middle'); xl.setAttribute('font-size','9');
+      xl.setAttribute('fill','#b5a99a'); xl.setAttribute('font-family','DM Sans,sans-serif');
+      xl.textContent = p.day;
+      svg.appendChild(xl);
+    }
+  });
+
+  graphWrap.appendChild(svg);
+  app.appendChild(graphWrap);
+
   // Swipe
   let sx=null;
   app.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
