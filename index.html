@@ -458,11 +458,11 @@ function renderDay(){
     del.onclick=()=>{ const nd=[...dues]; nd.splice(i,1); updateDayData(key,{dues:nd}); };
     item.appendChild(del); dueList.appendChild(item);
   });
-  const dueColorRow = renderColorPicker(state.dueColor, c=>{ state.dueColor=c; render(); });
-  dueList.appendChild(dueColorRow);
   const dueRow = el('div','add-input-row');
   const dueIn = ce('input',{type:'text',placeholder:'Add due date item...',className:'add-input'});
   dueIn.style.color=state.dueColor;
+  const dueColorRow = renderColorPicker(state.dueColor, c=>{ state.dueColor=c; dueIn.style.color=c; dueColorRow.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.style.background===c)); });
+  dueList.appendChild(dueColorRow);
   const dueBtn = el('button','add-btn','+');
   dueBtn.onclick=()=>{ if(!dueIn.value.trim())return; updateDayData(key,{dues:[...dues,{text:dueIn.value.trim(),color:state.dueColor}]}); dueIn.value=''; };
   dueIn.onkeydown=e=>{ if(e.key==='Enter')dueBtn.click(); };
@@ -484,11 +484,11 @@ function renderDay(){
     del.onclick=()=>{ const nt=[...todos]; nt.splice(i,1); updateDayData(key,{todos:nt}); };
     item.append(chk,txt,del); todoList.appendChild(item);
   });
-  const todoColorRow = renderColorPicker(state.todoColor, c=>{ state.todoColor=c; render(); });
-  todoList.appendChild(todoColorRow);
   const todoRow = el('div','add-input-row');
   const todoIn = ce('input',{type:'text',placeholder:'Add to-do...',className:'add-input'});
   todoIn.style.color=state.todoColor;
+  const todoColorRow = renderColorPicker(state.todoColor, c=>{ state.todoColor=c; todoIn.style.color=c; todoColorRow.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('selected',s.style.background===c)); });
+  todoList.appendChild(todoColorRow);
   const todoBtn = el('button','add-btn','+');
   todoBtn.onclick=()=>{ if(!todoIn.value.trim())return; updateDayData(key,{todos:[...todos,{text:todoIn.value.trim(),done:false,color:state.todoColor}]}); todoIn.value=''; };
   todoIn.onkeydown=e=>{ if(e.key==='Enter')todoBtn.click(); };
