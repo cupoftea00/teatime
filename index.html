@@ -115,6 +115,15 @@ body { background: #f7f4ef; font-family: 'DM Sans', sans-serif; color: #2c2825; 
 .progress-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 32px; gap: 8px; }
 .progress-label { font-size: clamp(10px,1.2vw,13px); letter-spacing: .1em; text-transform: uppercase; color: #b5a99a; }
 
+/* GROCERY LIST */
+.grocery-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fff; border: 1px solid #ebe6de; border-radius: 10px; font-size: clamp(12px,1.6vw,15px); color: #2c2825; }
+.grocery-check { width: 17px; height: 17px; border: 1.5px solid #c5bbb2; border-radius: 4px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; background: none; transition: all .15s; }
+.grocery-check.done { background: #c17f5a; border-color: #c17f5a; color: #fff; }
+.grocery-text { flex: 1; cursor: pointer; }
+.grocery-text.done { text-decoration: line-through; color: #b5a99a; }
+.grocery-input-wrap { display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: #fff; border: 1px solid #c17f5a; border-radius: 10px; margin-top: 0; }
+.grocery-inline-input { flex: 1; border: none; outline: none; background: transparent; font-family: ‘DM Sans’,sans-serif; font-size: clamp(12px,1.6vw,15px); color: #2c2825; padding: 4px 0; }
+
 /* INLINE EDIT */
 .editable-text { cursor: pointer; }
 .editable-text:hover { text-decoration: underline dotted #c5bbb2; }
@@ -194,8 +203,9 @@ function makeEditable(spanEl, currentValue, onSave, extraStyle, colorConfig) {
   const finish = (save) => {
     if(saved) return;
     saved = true;
-    if(save && input.value.trim()) {
-      onSave(input.value.trim(), currentColor);
+    const newVal = input.value.trim();
+    if(save && newVal && (newVal !== currentValue || currentColor !== (colorConfig?colorConfig.current:null))) {
+      onSave(newVal, currentColor);
     } else {
       wrap.replaceWith(spanEl);
     }
@@ -580,6 +590,54 @@ function renderDay(){
   todoRow.append(todoIn,todoBtn); todoList.appendChild(todoRow);
   content.appendChild(todoList);
 
+  // ── GROCERY LIST ──
+  content.appendChild(el('div','section-title','Grocery List'));
+  const groceries = dd.groceries||[];
+  const groceryList = el('div','');
+  groceryList.style.cssText='display:flex;flex-direction:column;gap:8px;';
+
+  groceries.forEach((g,i) => {
+    const item = el('div','grocery-item');
+    const chk = el('div','grocery-check'+(g.done?' done':''),g.done?'✓':'');
+    chk.onclick = () => { groceries[i]={...groceries[i],done:!groceries[i].done}; updateDayData(key,{groceries:[...groceries]}); };
+    const txt = el('span','grocery-text editable-text'+(g.done?' done':''),g.text);
+    if(!g.done){ txt.onclick = () => {
+      makeEditable(txt, g.text, newVal => {
+        groceries[i]={...groceries[i],text:newVal}; updateDayData(key,{groceries:[...groceries]});
+      });
+    }; }
+    const del = el('button','delete-btn','×');
+    del.onclick = () => { groceries.splice(i,1); updateDayData(key,{groceries:[...groceries]}); };
+    item.append(chk,txt,del);
+    groceryList.appendChild(item);
+  });
+
+  // Input row: growing textarea + save button
+  const groceryAddRow = el('div','add-input-row');
+  groceryAddRow.style.alignItems='flex-end';
+  const groceryTA = document.createElement('textarea');
+  groceryTA.placeholder = 'Add item...';
+  groceryTA.className = 'add-input';
+  groceryTA.rows = 1;
+  groceryTA.style.resize='none'; groceryTA.style.overflow='hidden'; groceryTA.style.lineHeight='1.6';
+  const autoResize = () => { groceryTA.style.height='auto'; groceryTA.style.height=groceryTA.scrollHeight+'px'; };
+  groceryTA.oninput = autoResize;
+
+  const saveGrocery = () => {
+    const val = groceryTA.value.trim();
+    if(!val) return;
+    updateDayData(key,{groceries:[...groceries,{text:val,done:false}]});
+  };
+
+  const grocerySaveBtn = el('button','add-btn','+');
+  grocerySaveBtn.style.alignSelf='flex-end';
+  grocerySaveBtn.onclick = saveGrocery;
+
+  groceryAddRow.append(groceryTA, grocerySaveBtn);
+  groceryList.appendChild(groceryAddRow);
+
+  content.appendChild(groceryList);
+
   // Little Habits button
   const ritBtn = el('button','daily-rituals-btn','✦ Little Habits');
   ritBtn.onclick=()=>setState({view:'rituals'});
@@ -627,8 +685,8 @@ function renderRituals(){
     const item = el('div','ritual-item');
     const chk = el('div',`ritual-check${h.done?' done':''}`,h.done?'✓':'');
     chk.onclick=()=>{ const nh=[...habits]; nh[i]={...nh[i],done:!nh[i].done}; updateDayData(key,{habits:nh}); };
-    const txt = el('span',`ritual-text editable-text${h.done?' done':''}`,h.text);
-    txt.onclick=()=>{ makeEditable(txt,h.text,newVal=>{ const nh=[...habits];nh[i]={...nh[i],text:newVal};updateDayData(key,{habits:nh}); }); };
+    const txt = el('span',`ritual-text${h.done?'':' editable-text'}${h.done?' done':''}`,h.text);
+    if(!h.done){ txt.onclick=()=>{ makeEditable(txt,h.text,newVal=>{ const nh=[...habits];nh[i]={...nh[i],text:newVal};updateDayData(key,{habits:nh}); }); }; }
     const del = el('button','ritual-delete','×');
     del.onclick=()=>{ const nh=[...habits]; nh.splice(i,1); updateDayData(key,{habits:nh}); };
     item.append(chk,txt,del); list.appendChild(item);
